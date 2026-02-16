@@ -1,7 +1,2 @@
 packages:
-  - 'packages/*'
   - 'admin'
-  - 'webapp'
-
-onlyBuiltDependencies:
-  - supabase
