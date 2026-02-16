@@ -38,13 +38,11 @@ export default function Sidebar() {
       items: [
         { href: "/transactions", label: "取引明細" },
         { href: "/entry", label: "フォーム入力" },
-        { href: "/upload-csv", label: "CSVインポート" },
       ],
     },
     {
       title: "マスタ",
       items: [
-        { href: "/counterparts", label: "取引先マスタ" },
         { href: "/project-master", label: "案件マスタ" },
       ],
     },
