@@ -29,7 +29,7 @@ export default function TransactionEntryForm({ projects }: TransactionEntryFormP
         transaction_type: "expense" as TransactionType,
         description: "",
         amount: "",
-        project_id: "",
+        project_id: "none",
         category_key: "fixed-cost",
         debit_account: "什器備品費",
         credit_account: "普通預金",
@@ -43,7 +43,7 @@ export default function TransactionEntryForm({ projects }: TransactionEntryFormP
             const result = await saveTransactionAction({
                 ...formData,
                 amount: Number(formData.amount),
-                project_id: formData.project_id || undefined,
+                project_id: formData.project_id === "none" ? undefined : formData.project_id,
             });
 
             if (result.success) {

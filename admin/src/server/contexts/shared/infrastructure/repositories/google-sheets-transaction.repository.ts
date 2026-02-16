@@ -30,9 +30,9 @@ export class GoogleSheetsTransactionRepository implements ITransactionRepository
         });
 
         const rows = response.data.values || [];
-        // Filter out empty rows (at least id or transaction_date should exist)
+        // Filter out empty rows (ID is REQUIRED)
         return rows
-            .filter(row => row && row.length > 0 && (row[0] || row[3]))
+            .filter(row => row && row.length > 0 && row[0]) // row[0] must exist
             .map(row => this.mapRowToTransaction(row));
     }
 

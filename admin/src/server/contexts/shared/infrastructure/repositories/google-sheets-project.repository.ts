@@ -22,9 +22,9 @@ export class GoogleSheetsProjectRepository implements IProjectRepository {
             });
 
             const rows = response.data.values || [];
-            // Filter out empty rows (at least id or name should exist)
+            // Filter out empty rows (ID is REQUIRED)
             return rows
-                .filter(row => row && row.length > 0 && (row[0] || row[1]))
+                .filter(row => row && row.length > 0 && row[0]) // row[0] must exist
                 .map(row => this.mapRowToProject(row));
         } catch (error) {
             console.warn("Failed to fetch projects (sheet might not exist yet):", error);
