@@ -1,0 +1,320 @@
+name: CI
+
+on:
+  pull_request:
+    paths:
+      - 'admin/**'
+      - 'webapp/**'
+      - 'packages/**'
+      - 'prisma/**'
+      - '.dependency-cruiser.cjs'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/**'
+
+env:
+  # Supabase local development defaults
+  # Note: SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are now dynamically generated
+  # by Supabase CLI and will be extracted after `supabase start` in the e2e job
+  SUPABASE_URL: http://127.0.0.1:54321
+  # Note: CI uses default Supabase ports (54321 for API, 54322 for DB)
+  # Local development may use different ports - check supabase/config.toml
+  DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+  DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+jobs:
+  admin:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Cache Prisma client
+        uses: actions/cache@v5
+        with:
+          path: node_modules/.prisma
+          key: ${{ runner.os }}-prisma-${{ hashFiles('prisma/schema.prisma') }}
+          restore-keys: |
+            ${{ runner.os }}-prisma-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run lint for admin
+        run: pnpm --filter admin run lint
+
+      - name: Run tests for admin with coverage
+        run: pnpm --filter admin run test:coverage
+
+      - name: Run type check for admin
+        run: pnpm --filter admin run type-check
+
+      - name: Check dependency rules for admin
+        run: pnpm depcruise
+
+      - name: Upload admin coverage
+        uses: actions/upload-artifact@v6
+        with:
+          name: admin-coverage
+          path: admin/coverage/lcov.info
+
+  webapp:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Cache Prisma client
+        uses: actions/cache@v5
+        with:
+          path: node_modules/.prisma
+          key: ${{ runner.os }}-prisma-${{ hashFiles('prisma/schema.prisma') }}
+          restore-keys: |
+            ${{ runner.os }}-prisma-
+
+      - name: Cache Next.js build
+        uses: actions/cache@v5
+        with:
+          path: webapp/.next/cache
+          key: ${{ runner.os }}-nextjs-webapp-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('webapp/**/*.ts', 'webapp/**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-webapp-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-nextjs-webapp-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run lint for webapp
+        run: pnpm --filter webapp run lint
+
+      - name: Run tests for webapp with coverage
+        run: pnpm --filter webapp run test:coverage
+
+      - name: Run type check for webapp
+        run: pnpm --filter webapp run type-check
+
+      - name: Upload webapp coverage
+        uses: actions/upload-artifact@v6
+        with:
+          name: webapp-coverage
+          path: webapp/coverage/lcov.info
+
+  knip:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Check unused code
+        run: pnpm knip
+
+  coverage:
+    runs-on: ubuntu-latest
+    needs: [admin, webapp]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Download admin coverage
+        uses: actions/download-artifact@v7
+        with:
+          name: admin-coverage
+          path: admin/coverage
+
+      - name: Download webapp coverage
+        uses: actions/download-artifact@v7
+        with:
+          name: webapp-coverage
+          path: webapp/coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./admin/coverage/lcov.info,./webapp/coverage/lcov.info
+          fail_ci_if_error: false
+
+  e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Cache Prisma client
+        uses: actions/cache@v5
+        with:
+          path: node_modules/.prisma
+          key: ${{ runner.os }}-prisma-${{ hashFiles('prisma/schema.prisma') }}
+          restore-keys: |
+            ${{ runner.os }}-prisma-
+
+      - name: Cache Next.js build (admin)
+        uses: actions/cache@v5
+        with:
+          path: admin/.next/cache
+          key: ${{ runner.os }}-nextjs-admin-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('admin/**/*.ts', 'admin/**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-admin-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-nextjs-admin-
+
+      - name: Cache Next.js build (webapp)
+        uses: actions/cache@v5
+        with:
+          path: webapp/.next/cache
+          key: ${{ runner.os }}-nextjs-webapp-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('webapp/**/*.ts', 'webapp/**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-webapp-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-nextjs-webapp-
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright browsers
+        run: pnpm --filter admin exec playwright install chromium --with-deps
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Start Supabase
+        run: |
+          # Enable API and use default ports for CI
+          sed -i 's/^\[api\]$/[api]/' supabase/config.toml
+          sed -i '/^\[api\]$/,/^\[/{s/^enabled = false$/enabled = true/}' supabase/config.toml
+          sed -i 's/^port = 54332$/port = 54322/' supabase/config.toml
+
+          # Start Supabase
+          supabase start --exclude imgproxy,edge-runtime,vector,studio
+
+          # Wait for Supabase API to be ready
+          echo "Waiting for Supabase API..."
+          timeout 60 bash -c 'until curl -s http://127.0.0.1:54321/rest/v1/ > /dev/null 2>&1; do sleep 2; done'
+          echo "Supabase is ready"
+
+      - name: Get Supabase keys
+        id: supabase-keys
+        run: |
+          # Extract dynamic keys from Supabase CLI
+          SUPABASE_STATUS=$(supabase status --output json)
+          ANON_KEY=$(echo "$SUPABASE_STATUS" | jq -r '.ANON_KEY')
+          SERVICE_ROLE_KEY=$(echo "$SUPABASE_STATUS" | jq -r '.SERVICE_ROLE_KEY')
+
+          echo "SUPABASE_ANON_KEY=$ANON_KEY" >> $GITHUB_OUTPUT
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> $GITHUB_OUTPUT
+
+          # Also set as environment variables for subsequent steps
+          echo "SUPABASE_ANON_KEY=$ANON_KEY" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY" >> $GITHUB_ENV
+
+      - name: Run database migrations and seed
+        run: |
+          pnpm db:migrate:deploy
+          pnpm db:seed
+
+      - name: Build admin
+        run: pnpm build:admin
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase-keys.outputs.SUPABASE_ANON_KEY }}
+
+      - name: Build webapp
+        run: pnpm build:webapp
+
+      - name: Run E2E tests for admin
+        run: pnpm --filter admin test:e2e
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase-keys.outputs.SUPABASE_ANON_KEY }}
+
+      - name: Run E2E tests for webapp
+        run: pnpm --filter webapp test:e2e
+
+      - name: Upload admin E2E test results
+        uses: actions/upload-artifact@v6
+        if: ${{ !cancelled() }}
+        with:
+          name: admin-e2e-report
+          path: admin/e2e/.output/
+          retention-days: 7
+
+      - name: Upload webapp E2E test results
+        uses: actions/upload-artifact@v6
+        if: ${{ !cancelled() }}
+        with:
+          name: webapp-e2e-report
+          path: webapp/e2e/.output/
+          retention-days: 7

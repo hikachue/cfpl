@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .font-japanese {
+    font-family: var(--font-noto-sans-jp), "Noto Sans JP", sans-serif;
+  }
+  .font-english {
+    font-family: var(--font-noto-sans), "Noto Sans", sans-serif;
+  }
+
+  /* Screen Reader Only - スクリーンリーダー専用コンテンツ */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+:root {
+  --background: linear-gradient(135deg, rgba(226, 246, 243, 1) 0%, rgba(238, 246, 226, 1) 100%);
+  --foreground: #171717;
+
+  /* Figma Design System Colors */
+  /* Black系 */
+  --color-black-500: #85868e;
+  --color-black-600: #6b7280;
+  --color-black-700: #4b5563;
+  --color-black-800: #1f2937;
+  --color-black-900: #000000;
+
+  /* Green系 (Primary) */
+  --color-primary-400: #30bca7;
+  --color-primary-500: #2aa693;
+  --color-primary-600: #238778;
+
+  /* Red系 (Danger) */
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+
+  /* Background */
+  --color-white: #ffffff;
+
+  /* Semantic colors */
+  --color-income: var(--color-primary-500);
+  --color-expense: var(--color-danger-500);
+  --color-text-primary: var(--color-black-900);
+  --color-text-secondary: var(--color-black-500);
+  --color-text-muted: var(--color-black-600);
+}
+
+body {
+  background: var(--background);
+  background-color: #e2f6f3; /* バウンスエフェクト時の背景色 */
+  color: var(--foreground);
+  /* font-family: sans-serif; */
+}
+
+/* フォーカスインジケーター - キーボードナビゲーション用のみ */
+*:focus {
+  outline: none; /* デフォルトのアウトラインを無効化 */
+}
+
+*:focus-visible {
+  outline: 2px solid #2aa693;
+  outline-offset: 2px;
+}
+
+/* ボタンのフォーカス - キーボードのみ */
+button:focus {
+  outline: none;
+}
+
+button:focus-visible {
+  outline: 2px solid #2aa693;
+  outline-offset: 2px;
+}
+
+/* リンクのフォーカス - キーボードのみ */
+a:focus {
+  outline: none;
+}
+
+a:focus-visible {
+  outline: 2px solid #2aa693;
+  outline-offset: 2px;
+}
+
+/* テーブルのフォーカス - キーボードのみ */
+table:focus {
+  outline: none;
+}
+
+table:focus-visible {
+  outline: 2px solid #2aa693;
+  outline-offset: 2px;
+}
