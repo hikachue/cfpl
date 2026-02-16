@@ -26,42 +26,56 @@ export class GoogleSheetsTransactionRepository implements ITransactionRepository
 
         const response = await service.spreadsheets.values.get({
             spreadsheetId,
-            range: `${this.SHEET_NAME}!A2:Z`, // Assuming headers are in row 1
+            range: `${this.SHEET_NAME}!A2:Z`,
         });
 
         const rows = response.data.values || [];
-        return rows.map(row => this.mapRowToTransaction(row));
+        // Filter out empty rows (at least id or transaction_date should exist)
+        return rows
+            .filter(row => row && row.length > 0 && (row[0] || row[3]))
+            .map(row => this.mapRowToTransaction(row));
     }
 
     private mapRowToTransaction(row: any[]): Transaction {
-        // Basic mapping, robust parsing needed for dates/numbers
+        const parseDate = (val: any) => {
+            if (!val) return new Date();
+            const date = new Date(val);
+            return isNaN(date.getTime()) ? new Date() : date;
+        };
+
+        const parseFloatSafe = (val: any) => {
+            if (!val) return 0;
+            const parsed = parseFloat(String(val).replace(/,/g, ""));
+            return isNaN(parsed) ? 0 : parsed;
+        };
+
         return {
             id: row[0] || "",
             project_id: row[1] || undefined,
             transaction_no: row[2] || "",
-            transaction_date: new Date(row[3]),
+            transaction_date: parseDate(row[3]),
             financial_year: parseInt(row[4] || "0", 10),
-            transaction_type: row[5] as any,
+            transaction_type: (row[5] as "income" | "expense" | "non_cash_journal") || "expense",
             debit_account: row[6] || "",
             debit_sub_account: row[7] || undefined,
             debit_department: row[8] || undefined,
             debit_partner: row[9] || undefined,
             debit_tax_category: row[10] || undefined,
-            debit_amount: parseFloat(row[11] || "0"),
+            debit_amount: parseFloatSafe(row[11]),
             credit_account: row[12] || "",
             credit_sub_account: row[13] || undefined,
             credit_department: row[14] || undefined,
             credit_partner: row[15] || undefined,
             credit_tax_category: row[16] || undefined,
-            credit_amount: parseFloat(row[17] || "0"),
+            credit_amount: parseFloatSafe(row[17]),
             description: row[18] || undefined,
             friendly_category: row[19] || undefined,
             memo: row[20] || undefined,
             category_key: row[21] || undefined,
             label: row[22] || "",
             hash: row[23] || "",
-            created_at: new Date(row[24] || new Date().toISOString()),
-            updated_at: new Date(row[25] || new Date().toISOString()),
+            created_at: parseDate(row[24]),
+            updated_at: parseDate(row[25]),
         };
     }
 

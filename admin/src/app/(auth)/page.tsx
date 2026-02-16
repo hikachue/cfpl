@@ -25,12 +25,6 @@ export default async function DashboardPage() {
           <p className="text-muted-foreground mt-1">Basement Mgt. 経営状況サマリー</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/upload-csv">
-              <Download className="mr-2 h-4 w-4" />
-              CSVインポート
-            </Link>
-          </Button>
           <Button size="sm" asChild>
             <Link href="/entry">
               <Plus className="mr-2 h-4 w-4" />

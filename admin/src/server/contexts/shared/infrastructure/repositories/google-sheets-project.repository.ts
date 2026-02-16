@@ -18,42 +18,54 @@ export class GoogleSheetsProjectRepository implements IProjectRepository {
         try {
             const response = await service.spreadsheets.values.get({
                 spreadsheetId,
-                range: `${this.SHEET_NAME}!A2:H`, // Assuming 8 columns
+                range: `${this.SHEET_NAME}!A2:I`, // Expanded to A-I (9 columns)
             });
 
             const rows = response.data.values || [];
-            return rows.map(row => this.mapRowToProject(row));
+            // Filter out empty rows (at least id or name should exist)
+            return rows
+                .filter(row => row && row.length > 0 && (row[0] || row[1]))
+                .map(row => this.mapRowToProject(row));
         } catch (error) {
             console.warn("Failed to fetch projects (sheet might not exist yet):", error);
             return [];
         }
     }
 
-    private mapRowToProject(row: string[]): Project {
+    private mapRowToProject(row: any[]): Project {
+        const parseDate = (val: any) => {
+            if (!val) return undefined;
+            const date = new Date(val);
+            return isNaN(date.getTime()) ? undefined : date;
+        };
+
+        const now = new Date();
+
         return {
             id: row[0] || "",
             name: row[1] || "",
             code: row[2] || undefined,
             description: row[3] || undefined,
             status: (row[4] as "active" | "completed" | "archived") || "active",
-            start_date: row[5] ? new Date(row[5]) : undefined,
-            end_date: row[6] ? new Date(row[6]) : undefined,
-            created_at: new Date(row[7] || new Date().toISOString()),
-            updated_at: new Date(row[8] || new Date().toISOString()), // Oops, index 8 implies 9 columns. A2:I needed.
+            start_date: parseDate(row[5]),
+            end_date: parseDate(row[6]),
+            created_at: parseDate(row[7]) || now,
+            updated_at: parseDate(row[8]) || now,
         };
     }
 
     private mapProjectToRow(p: Project): any[] {
+        const formatDate = (d?: Date) => d ? d.toISOString() : "";
         return [
             p.id,
             p.name,
             p.code || "",
             p.description || "",
             p.status,
-            p.start_date ? p.start_date.toISOString() : "",
-            p.end_date ? p.end_date.toISOString() : "",
-            p.created_at.toISOString(),
-            p.updated_at.toISOString()
+            formatDate(p.start_date),
+            formatDate(p.end_date),
+            formatDate(p.created_at),
+            formatDate(p.updated_at)
         ];
     }
 

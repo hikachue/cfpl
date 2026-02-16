@@ -131,7 +131,7 @@ export default function TransactionEntryForm({ projects }: TransactionEntryFormP
                                     <SelectValue placeholder="案件を選択 (任意)" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">(指定なし)</SelectItem>
+                                    <SelectItem value="none">(指定なし)</SelectItem>
                                     {projects.map((p) => (
                                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                                     ))}
