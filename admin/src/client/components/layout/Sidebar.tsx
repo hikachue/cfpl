@@ -51,7 +51,7 @@ export default function Sidebar() {
   return (
     <aside className="bg-card p-4 flex flex-col h-full border-r">
       <div className="mb-6 px-2">
-        <h1 className="font-bold text-lg text-primary">Basement Mgt.</h1>
+        <h1 className="font-bold text-lg text-primary">CFPLSys2_BASE</h1>
       </div>
       <nav className="flex flex-col gap-6">
         {navSections.map((section) => (
